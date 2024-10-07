@@ -1,7 +1,6 @@
 use clap::{Args, Parser, Subcommand};
-use directories::UserDirs;
 use rusqlite::Connection;
-use std::{fs, io, path::PathBuf};
+use std::{fs, io};
 use vivaldi_history_extractor::{get_search_records, get_visit_records};
 
 #[derive(Parser)]
@@ -49,34 +48,40 @@ fn default_input_path() -> impl clap::builder::IntoResettable<clap::builder::OsS
 
     #[cfg(not(any(windows, target_os = "linux")))]
     {
-        return default;
+        default
     }
 
-    let Some(user_dir) = UserDirs::new() else {
-        return default;
-    };
-    let Some(home) = user_dir.home_dir().to_str() else {
-        return default;
-    };
-
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "linux"))]
     {
-        let history_path: PathBuf = [home, r#"AppData\Local\Vivaldi\User Data\Default\History"#]
-            .iter()
-            .collect();
-        let Some(history_path) = history_path.to_str() else {
+        use std::path::PathBuf;
+
+        let Some(user_dir) = directories::UserDirs::new() else {
             return default;
         };
-        return String::from(history_path);
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        let history_path: PathBuf = [home, ".config/vivaldi/Default/History"].iter().collect();
-        let Some(history_path) = history_path.to_str() else {
+        let Some(home) = user_dir.home_dir().to_str() else {
             return default;
         };
-        return String::from(history_path);
+
+        #[cfg(windows)]
+        {
+            let history_path: PathBuf =
+                [home, r#"AppData\Local\Vivaldi\User Data\Default\History"#]
+                    .iter()
+                    .collect();
+            let Some(history_path) = history_path.to_str() else {
+                return default;
+            };
+            String::from(history_path)
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            let history_path: PathBuf = [home, ".config/vivaldi/Default/History"].iter().collect();
+            let Some(history_path) = history_path.to_str() else {
+                return default;
+            };
+            String::from(history_path)
+        }
     }
 }
 
