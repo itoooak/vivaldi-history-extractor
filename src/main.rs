@@ -47,7 +47,7 @@ fn default_input_path() -> impl clap::builder::IntoResettable<clap::builder::OsS
 
     let default: String = String::from("History");
 
-    #[cfg(not(windows))]
+    #[cfg(not(any(windows, target_os = "linux")))]
     {
         return default;
     }
@@ -64,6 +64,15 @@ fn default_input_path() -> impl clap::builder::IntoResettable<clap::builder::OsS
         let history_path: PathBuf = [home, r#"AppData\Local\Vivaldi\User Data\Default\History"#]
             .iter()
             .collect();
+        let Some(history_path) = history_path.to_str() else {
+            return default;
+        };
+        return String::from(history_path);
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let history_path: PathBuf = [home, ".config/vivaldi/Default/History"].iter().collect();
         let Some(history_path) = history_path.to_str() else {
             return default;
         };
