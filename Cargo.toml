@@ -5,7 +5,8 @@ edition = "2021"
 
 [dependencies]
 chrono = { version = "0.4.38", features = ["serde"] }
-clap = { version = "4.5.19", features = ["derive"] }
+clap = { version = "4.5.19", features = ["derive", "string"] }
+directories = "5.0.1"
 rusqlite = { version = "0.32.1", features = ["bundled"] }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"

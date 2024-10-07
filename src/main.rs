@@ -1,6 +1,7 @@
 use clap::{Args, Parser, Subcommand};
+use directories::UserDirs;
 use rusqlite::Connection;
-use std::{fs, io};
+use std::{fs, io, path::PathBuf};
 use vivaldi_history_extractor::{get_search_records, get_visit_records};
 
 #[derive(Parser)]
@@ -25,7 +26,7 @@ enum Commands {
 struct CommonArgs {
     /// Path to the input file.
     #[arg(short, long)]
-    #[arg(default_value = "History")]
+    #[arg(default_value = default_input_path())]
     input: String,
 
     /// Path to the output file.
@@ -39,6 +40,37 @@ struct CommonArgs {
     force: bool,
 }
 
+fn default_input_path() -> impl clap::builder::IntoResettable<clap::builder::OsStr> {
+    // example
+    // Windows: C:\Users\<username>\AppData\Local\Vivaldi\User Data\Default\History
+    // Linux:   /home/<username>/.config/vivaldi/Default/History
+
+    let default: String = String::from("History");
+
+    #[cfg(not(windows))]
+    {
+        return default;
+    }
+
+    let Some(user_dir) = UserDirs::new() else {
+        return default;
+    };
+    let Some(home) = user_dir.home_dir().to_str() else {
+        return default;
+    };
+
+    #[cfg(windows)]
+    {
+        let history_path: PathBuf = [home, r#"AppData\Local\Vivaldi\User Data\Default\History"#]
+            .iter()
+            .collect();
+        let Some(history_path) = history_path.to_str() else {
+            return default;
+        };
+        return String::from(history_path);
+    }
+}
+
 fn get_common_args(cmd: &Commands) -> CommonArgs {
     match cmd {
         Commands::Visit { args } => args.clone(),
@@ -50,7 +82,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let common_args = get_common_args(&cli.command);
 
-    // ex(Windows). r#"C:\Users\<username>\AppData\Local\Vivaldi\User Data\Default\History"#
     let path = common_args.input;
 
     let conn = if fs::exists(&path)? {
